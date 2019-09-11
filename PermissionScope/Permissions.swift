@@ -7,7 +7,6 @@
 //
 
 import Foundation
-import CoreLocation
 import AddressBook
 import AVFoundation
 import Photos
@@ -32,14 +31,6 @@ import Accounts
     public init(notificationCategories: Set<UIUserNotificationCategory>? = nil) {
         self.notificationCategories = notificationCategories
     }
-}
-
-@objc public class LocationWhileInUsePermission: NSObject, Permission {
-    public let type: PermissionType = .locationInUse
-}
-
-@objc public class LocationAlwaysPermission: NSObject, Permission {
-    public let type: PermissionType = .locationAlways
 }
 
 @objc public class ContactsPermission: NSObject, Permission {

@@ -7,7 +7,6 @@
 //
 
 import UIKit
-import CoreLocation
 import AddressBook
 import AVFoundation
 import Photos
@@ -21,7 +20,7 @@ public typealias authClosureType      = (_ finished: Bool, _ results: [Permissio
 public typealias cancelClosureType    = (_ results: [PermissionResult]) -> Void
 typealias resultsForConfigClosure     = ([PermissionResult]) -> Void
 
-@objc public class PermissionScope: UIViewController, CLLocationManagerDelegate, UIGestureRecognizerDelegate, CBPeripheralManagerDelegate {
+@objc public class PermissionScope: UIViewController, UIGestureRecognizerDelegate, CBPeripheralManagerDelegate {
 
     // MARK: UI Parameters
     
@@ -59,13 +58,6 @@ typealias resultsForConfigClosure     = ([PermissionResult]) -> Void
     // MARK: View hierarchy for custom alert
     let baseView    = UIView()
     public let contentView = UIView()
-
-    // MARK: - Various lazy managers
-    lazy var locationManager:CLLocationManager = {
-        let lm = CLLocationManager()
-        lm.delegate = self
-        return lm
-    }()
 
     lazy var bluetoothManager:CBPeripheralManager = {
         return CBPeripheralManager(delegate: self, queue: nil, options:[CBPeripheralManagerOptionShowPowerAlertKey: false])
@@ -330,13 +322,7 @@ typealias resultsForConfigClosure     = ([PermissionResult]) -> Void
         button.layer.borderColor = permissionButtonBorderColor.cgColor
         button.layer.cornerRadius = permissionButtonCornerRadius
 
-        // this is a bit of a mess, eh?
-        switch type {
-        case .locationAlways, .locationInUse:
-            button.setTitle("Enable \(type.prettyDescription)".localized.uppercased(), for: .normal)
-        default:
-            button.setTitle("Allow \(type)".localized.uppercased(), for: .normal)
-        }
+        button.setTitle("Allow \(type)".localized.uppercased(), for: .normal)
         
         button.addTarget(self, action: Selector("request\(type)"), for: .touchUpInside)
 
@@ -386,102 +372,6 @@ typealias resultsForConfigClosure     = ([PermissionResult]) -> Void
     }
 
     // MARK: - Status and Requests for each permission
-    
-    // MARK: Location
-    
-    /**
-    Returns the current permission status for accessing LocationAlways.
-    
-    - returns: Permission status for the requested type.
-    */
-    public func statusLocationAlways() -> PermissionStatus {
-        guard CLLocationManager.locationServicesEnabled() else { return .disabled }
-
-        let status = CLLocationManager.authorizationStatus()
-        switch status {
-        case .authorizedAlways:
-            return .authorized
-        case .restricted, .denied:
-            return .unauthorized
-        case .authorizedWhenInUse:
-            // Curious why this happens? Details on upgrading from WhenInUse to Always:
-            // [Check this issue](https://github.com/nickoneill/PermissionScope/issues/24)
-            if defaults.bool(forKey: Constants.NSUserDefaultsKeys.requestedInUseToAlwaysUpgrade) {
-                return .unauthorized
-            } else {
-                return .unknown
-            }
-        case .notDetermined:
-            return .unknown
-        }
-    }
-
-    /**
-    Requests access to LocationAlways, if necessary.
-    */
-    public func requestLocationAlways() {
-    	let hasAlwaysKey:Bool = !Bundle.main
-    		.object(forInfoDictionaryKey: Constants.InfoPlistKeys.locationAlways).isNil
-    	assert(hasAlwaysKey, Constants.InfoPlistKeys.locationAlways + " not found in Info.plist.")
-    	
-        let status = statusLocationAlways()
-        switch status {
-        case .unknown:
-            if CLLocationManager.authorizationStatus() == .authorizedWhenInUse {
-                defaults.set(true, forKey: Constants.NSUserDefaultsKeys.requestedInUseToAlwaysUpgrade)
-                defaults.synchronize()
-            }
-            locationManager.requestAlwaysAuthorization()
-        case .unauthorized:
-            self.showDeniedAlert(.locationAlways)
-        case .disabled:
-            self.showDisabledAlert(.locationInUse)
-        default:
-            break
-        }
-    }
-
-    /**
-    Returns the current permission status for accessing LocationWhileInUse.
-    
-    - returns: Permission status for the requested type.
-    */
-    public func statusLocationInUse() -> PermissionStatus {
-        guard CLLocationManager.locationServicesEnabled() else { return .disabled }
-        
-        let status = CLLocationManager.authorizationStatus()
-        // if you're already "always" authorized, then you don't need in use
-        // but the user can still demote you! So I still use them separately.
-        switch status {
-        case .authorizedWhenInUse, .authorizedAlways:
-            return .authorized
-        case .restricted, .denied:
-            return .unauthorized
-        case .notDetermined:
-            return .unknown
-        }
-    }
-
-    /**
-    Requests access to LocationWhileInUse, if necessary.
-    */
-    public func requestLocationInUse() {
-    	let hasWhenInUseKey :Bool = !Bundle.main
-    		.object(forInfoDictionaryKey: Constants.InfoPlistKeys.locationWhenInUse).isNil
-    	assert(hasWhenInUseKey, Constants.InfoPlistKeys.locationWhenInUse + " not found in Info.plist.")
-    	
-        let status = statusLocationInUse()
-        switch status {
-        case .unknown:
-            locationManager.requestWhenInUseAuthorization()
-        case .unauthorized:
-            self.showDeniedAlert(.locationInUse)
-        case .disabled:
-            self.showDisabledAlert(.locationInUse)
-        default:
-            break
-        }
-    }
 
     // MARK: Contacts
     
@@ -1100,12 +990,6 @@ typealias resultsForConfigClosure     = ([PermissionResult]) -> Void
         }
         return false
     }
-
-    // MARK: Location delegate
-    
-    public func locationManager(_ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus) {
-        detectAndCallback()
-    }
     
     // MARK: Bluetooth delegate
     
@@ -1221,10 +1105,6 @@ typealias resultsForConfigClosure     = ([PermissionResult]) -> Void
         // Get permission status
         let permissionStatus: PermissionStatus
         switch type {
-        case .locationAlways:
-            permissionStatus = statusLocationAlways()
-        case .locationInUse:
-            permissionStatus = statusLocationInUse()
         case .contacts:
             permissionStatus = statusContacts()
         case .notifications:
