@@ -26,7 +26,6 @@
     
     [self.multiPscope addPermission:[[ContactsPermission alloc]init] message:@"We use this to steal\r\nyour friends"];
     [self.multiPscope addPermission:[[NotificationsPermission alloc]initWithNotificationCategories:nil] message:@"We use this to send you\r\nspam and love notes"];
-//    [self.multiPscope addPermission:[[MotionPermission alloc]init] message:@"We use this to detect if you are\r\nThe Flash"];
 }
 
 - (IBAction)single {

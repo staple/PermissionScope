@@ -10,7 +10,6 @@ import UIKit
 import AddressBook
 import AVFoundation
 import Photos
-import CoreMotion
 import Contacts
 
 public typealias statusRequestClosure = (_ status: PermissionStatus) -> Void
@@ -56,18 +55,11 @@ typealias resultsForConfigClosure     = ([PermissionResult]) -> Void
     // MARK: View hierarchy for custom alert
     let baseView    = UIView()
     public let contentView = UIView()
-
-    lazy var motionManager:CMMotionActivityManager = {
-        return CMMotionActivityManager()
-    }()
     
     /// NSUserDefaults standardDefaults lazy var
     lazy var defaults:UserDefaults = {
         return .standard
     }()
-    
-    /// Default status for Core Motion Activity
-    var motionPermissionStatus: PermissionStatus = .unknown
 
     // MARK: - Internal state and resolution
     
@@ -185,8 +177,6 @@ typealias resultsForConfigClosure     = ([PermissionResult]) -> Void
         closeButton.accessibilityIdentifier = "permissionscope.closeButton"
         
         contentView.addSubview(closeButton)
-        
-        _ = self.statusMotion() //Added to check motion status on load
     }
     
     /**
@@ -292,10 +282,6 @@ typealias resultsForConfigClosure     = ([PermissionResult]) -> Void
         
         configuredPermissions.append(permission)
         permissionMessages[permission.type] = message
-        
-        if permission.type == .motion && askedMotion {
-            triggerMotionStatusUpdate()
-        }
     }
 
     /**
@@ -611,79 +597,7 @@ typealias resultsForConfigClosure     = ([PermissionResult]) -> Void
             break
         }
     }
-    
-    // MARK: Core Motion Activity
-    
-    /**
-    Returns the current permission status for accessing Core Motion Activity.
-    
-    - returns: Permission status for the requested type.
-    */
-    public func statusMotion() -> PermissionStatus {
-        if askedMotion {
-            triggerMotionStatusUpdate()
-        }
-        return motionPermissionStatus
-    }
-    
-    /**
-    Requests access to Core Motion Activity, if necessary.
-    */
-    public func requestMotion() {
-        let status = statusMotion()
-        switch status {
-        case .unauthorized:
-            showDeniedAlert(.motion)
-        case .unknown:
-            triggerMotionStatusUpdate()
-        default:
-            break
-        }
-    }
-    
-    /**
-    Prompts motionManager to request a status update. If permission is not already granted the user will be prompted with the system's permission dialog.
-    */
-    fileprivate func triggerMotionStatusUpdate() {
-        let tmpMotionPermissionStatus = motionPermissionStatus
-        defaults.set(true, forKey: Constants.NSUserDefaultsKeys.requestedMotion)
-        defaults.synchronize()
-        
-        let today = Date()
-        motionManager.queryActivityStarting(from: today,
-            to: today,
-            to: .main) { activities, error in
-                if let error = error , error._code == Int(CMErrorMotionActivityNotAuthorized.rawValue) {
-                    self.motionPermissionStatus = .unauthorized
-                } else {
-                    self.motionPermissionStatus = .authorized
-                }
-                
-                self.motionManager.stopActivityUpdates()
-                if tmpMotionPermissionStatus != self.motionPermissionStatus {
-                    self.waitingForMotion = false
-                    self.detectAndCallback()
-                }
-        }
-        
-        askedMotion = true
-        waitingForMotion = true
-    }
-    
-    /// Returns whether Bluetooth access was asked before or not.
-    fileprivate var askedMotion:Bool {
-        get {
-            return defaults.bool(forKey: Constants.NSUserDefaultsKeys.requestedMotion)
-        }
-        set {
-            defaults.set(newValue, forKey: Constants.NSUserDefaultsKeys.requestedMotion)
-            defaults.synchronize()
-        }
-    }
-    
-    /// Returns whether PermissionScope is waiting for the user to enable/disable motion access or not.
-    fileprivate var waitingForMotion = false
-    
+
     // MARK: - UI
     
     /**
@@ -699,7 +613,6 @@ typealias resultsForConfigClosure     = ([PermissionResult]) -> Void
         onCancel = cancelled
         
         DispatchQueue.main.async {
-            while self.waitingForMotion { }
             // call other methods that need to wait before show
             // no missing required perms? callback and do nothing
             self.requiredAuthorized({ areAuthorized in
@@ -912,8 +825,6 @@ typealias resultsForConfigClosure     = ([PermissionResult]) -> Void
             permissionStatus = statusCamera()
         case .photos:
             permissionStatus = statusPhotos()
-        case .motion:
-            permissionStatus = statusMotion()
         }
         
         // Perform completion

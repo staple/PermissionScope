@@ -19,7 +19,6 @@ enum Constants {
     
     struct NSUserDefaultsKeys {
         static let requestedInUseToAlwaysUpgrade = "PS_requestedInUseToAlwaysUpgrade"
-        static let requestedMotion               = "PS_requestedMotion"
         static let requestedNotifications        = "PS_requestedNotifications"
     }
     

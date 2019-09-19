@@ -10,7 +10,6 @@ import Foundation
 import AddressBook
 import AVFoundation
 import Photos
-import CoreMotion
 import CloudKit
 import Accounts
 
@@ -44,8 +43,4 @@ public typealias requestPermissionShowAlert     = (PermissionType) -> Void
 
 @objc public class PhotosPermission: NSObject, Permission {
     public let type: PermissionType = .photos
-}
-
-@objc public class MotionPermission: NSObject, Permission {
-    public let type: PermissionType = .motion
 }
