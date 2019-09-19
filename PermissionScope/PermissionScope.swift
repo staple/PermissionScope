@@ -10,7 +10,6 @@ import UIKit
 import AddressBook
 import AVFoundation
 import Photos
-import EventKit
 import CoreMotion
 import Contacts
 
@@ -651,80 +650,6 @@ typealias resultsForConfigClosure     = ([PermissionResult]) -> Void
         }
     }
     
-    // MARK: Reminders
-    
-    /**
-    Returns the current permission status for accessing Reminders.
-    
-    - returns: Permission status for the requested type.
-    */
-    public func statusReminders() -> PermissionStatus {
-        let status = EKEventStore.authorizationStatus(for: .reminder)
-        switch status {
-        case .authorized:
-            return .authorized
-        case .restricted, .denied:
-            return .unauthorized
-        case .notDetermined:
-            return .unknown
-        }
-    }
-    
-    /**
-    Requests access to Reminders, if necessary.
-    */
-    public func requestReminders() {
-        let status = statusReminders()
-        switch status {
-        case .unknown:
-            EKEventStore().requestAccess(to: .reminder,
-                completion: { granted, error in
-                    self.detectAndCallback()
-            })
-        case .unauthorized:
-            self.showDeniedAlert(.reminders)
-        default:
-            break
-        }
-    }
-    
-    // MARK: Events
-    
-    /**
-    Returns the current permission status for accessing Events.
-    
-    - returns: Permission status for the requested type.
-    */
-    public func statusEvents() -> PermissionStatus {
-        let status = EKEventStore.authorizationStatus(for: .event)
-        switch status {
-        case .authorized:
-            return .authorized
-        case .restricted, .denied:
-            return .unauthorized
-        case .notDetermined:
-            return .unknown
-        }
-    }
-    
-    /**
-    Requests access to Events, if necessary.
-    */
-    public func requestEvents() {
-        let status = statusEvents()
-        switch status {
-        case .unknown:
-            EKEventStore().requestAccess(to: .event,
-                completion: { granted, error in
-                    self.detectAndCallback()
-            })
-        case .unauthorized:
-            self.showDeniedAlert(.events)
-        default:
-            break
-        }
-    }
-    
     // MARK: Core Motion Activity
     
     /**
@@ -1027,10 +952,6 @@ typealias resultsForConfigClosure     = ([PermissionResult]) -> Void
             permissionStatus = statusCamera()
         case .photos:
             permissionStatus = statusPhotos()
-        case .reminders:
-            permissionStatus = statusReminders()
-        case .events:
-            permissionStatus = statusEvents()
         case .motion:
             permissionStatus = statusMotion()
         }
